@@ -1,0 +1,23 @@
+# -workstation install still creates local user: debathena_workstation_user_setup doesn't get used
+
+# TODO:
+# custom-installation mechanism (see initramfs-tools(8) for how to copy things there) (don't clobber existing scripts, because that turns out to be a bad idea)
+# Checkboxes for -extra-software and -third-party.
+# Advanced installation options for -login
+# Put a version stamp in /var/log/debathena-livecd-version or something
+
+# Installing without internet?
+# Clicking on the restricted drivers thing multiple times
+
+# Mumble don't modify the resulting machine's initramfs-tools mumble
+? Going back on the debathena screen does the wrong thing
+# Enable propriatary drivers by default (System:Administation:Hardware Drivers)
+# do something like /mit/geofft/Public/start-network.py to get wirless
+#    working pre-login
+
+# Zenity dialog not in front
+# focus issues when backtracking
+
+# Test the actual install process more
+# Manpage
+# Change font on splashscreen?

@@ -1,0 +1,132 @@
+<?xml version="1.0"?>
+<interface>
+  <requires lib="gtk+" version="2.16"/>
+  <!-- interface-naming-policy toplevel-contextual -->
+  <object class="GtkVBox" id="stepDebathenaType">
+    <property name="visible">True</property>
+    <property name="border_width">6</property>
+    <child>
+      <object class="GtkLabel" id="debathena_heading_label">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="xalign">0</property>
+        <property name="label" translatable="yes">&lt;big&gt;&lt;b&gt;Debathena Computer Type&lt;/b&gt;&lt;/big&gt;</property>
+        <property name="use_markup">True</property>
+        <property name="selectable">True</property>
+        <property name="single_line_mode">True</property>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">False</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkHSeparator" id="hseparator20">
+        <property name="visible">True</property>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">False</property>
+        <property name="padding">6</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkVBox" id="debathena_type_vbox">
+        <property name="visible">True</property>
+        <property name="spacing">12</property>
+        <child>
+          <object class="GtkLabel" id="debathena_type_label">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="xalign">0</property>
+            <property name="label" translatable="yes">Select the type of Debathena installation you want on this computer.</property>
+            <property name="selectable">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkVBox" id="debathena_standard_vbox">
+            <property name="visible">True</property>
+            <property name="spacing">6</property>
+            <child>
+              <object class="GtkRadioButton" id="debathena_standard">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="label" translatable="yes">Debathena Standard: a personal workstation with full Athena access</property>
+                <property name="active">True</property>
+                <property name="draw_indicator">True</property>
+		<signal name="toggled" handler="on_debathena_type_set"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkAlignment" id="alignment2">
+                <property name="visible">True</property>
+                <property name="left_padding">24</property>
+                <child>
+                  <object class="GtkLabel" id="debathena_standard_explanation">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">&lt;i&gt;This installation gives your machine full access to Athena services, but uses local user accounts and home directories separate from your Athena account.  Only users you create can log in.  Recommended for laptops because you can log in even when you don't have internet.&lt;/i&gt;</property>
+                    <property name="use_markup">True</property>
+                    <property name="wrap">True</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkVBox" id="debathena_workstation_vbox">
+            <property name="visible">True</property>
+            <property name="spacing">6</property>
+            <child>
+              <object class="GtkRadioButton" id="debathena_workstation">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="label" translatable="yes">Debathena Workstation: a cluster-style graphical workstation with full Athena intergration</property>
+                <property name="draw_indicator">True</property>
+                <property name="group">debathena_standard</property>
+		<signal name="toggled" handler="on_debathena_type_set"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkAlignment" id="alignment1">
+                <property name="visible">True</property>
+                <property name="left_padding">24</property>
+                <child>
+                  <object class="GtkLabel" id="debathena_workstation_explanation">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">&lt;i&gt;This installation configures your machine as an Athena-cluster-style workstation.  Anyone can log in with their Athena username and password and access their Athena home directory.  Only specified users can log in remotely or administer the system.  You don't want this if you don't always have internet or you're behind a NAT. By installing this, you agree to Sun's Operating System Distributor License for Java version 1.1 (http://dlc.sun.com/dlj/DLJ-v1.1.txt).&lt;/i&gt;</property>
+                    <property name="use_markup">True</property>
+                    <property name="wrap">True</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="position">2</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="position">2</property>
+      </packing>
+    </child>
+  </object>
+</interface>

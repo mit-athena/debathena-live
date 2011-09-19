@@ -1,0 +1,33 @@
+#!/bin/bash
+
+function res {
+    #logger -t netcheck "$1"
+    echo "$1"
+}
+
+# Try multiple times, since we might be doing this right after boot, when
+# stuff's not upish yet
+for (( t=0 ; t < 3 ; t = t + 1 )) ; do
+    dip=$(host -t A debathena.mit.edu)
+    res=$?
+    if [[ $res == 0 ]] ; then
+	break
+    fi
+done
+if [[ $res != 0 ]] ; then
+    res "You seem not to have Internet.  Connect your computer to an Ethernet cable or configure your wireless, then try again."
+    exit 2
+fi
+
+dip=$(echo "$dip" | tail -n 1 | awk '{print $4}')
+
+if [[ "$dip" = "10.72.0.47" ]] ; then
+    res "You seem to be on MITNET but not have registered this computer.  Try opening Firefox and visiting any website to register, then try again."
+    exit 3
+elif [[ "$(echo $dip | cut -d . -f 1)" = "18" ]] ; then
+    #logger -t netcheck "Netcheck success!"
+    exit 0
+else
+    res "You seem to be on some non-MIT network that requires registration.  Try opening Firefox and visiting any website to register, then try again."
+    exit 4
+fi

@@ -1,0 +1,41 @@
+#!/bin/sh
+
+PREREQ=""
+DESCRIPTION="Modifying greeter for Debathena install..."
+
+. /scripts/casper-functions
+
+prereqs()
+{
+       echo "$PREREQ"
+}
+
+case $1 in
+# get pre-requisites
+prereqs)
+       prereqs
+       exit 0
+       ;;
+esac
+
+log_begin_msg "$DESCRIPTION"
+
+# Put static ubiquity files in to place
+cp -a "/root/oncd/ubiquity/lib/"* "/root/usr/lib/ubiquity/"
+cp -a "/root/oncd/ubiquity/share/"* "/root/usr/share/ubiquity/"
+# We need this for our aptitude 
+# success_cmd to not fail horribly, because ubiquity
+# gets rid of its version too soon.
+cp "/root/oncd/policy-rc.d" "/root/usr/share/ubiquity/"
+
+# Also, for some reason success commands aren't always run as root, so do
+# this hack
+sed -ri "s/^(\s+subprocess\.call\(\[)('sh', *'-c')/\1'sudo', \2/g" "/root/usr/lib/ubiquity/ubiquity/frontend/base.py"
+
+# And do the gtk_ui.py mods
+sed -ri -f "/root/oncd/ubiquity/gtk_ui-mods.sed" "/root/usr/lib/ubiquity/ubiquity/frontend/gtk_ui.py"
+
+# And check internet before installing
+sed -ri 's!(def main\(\):)!\1\n    if os.system("""text=$(/oncd/bin/netcheck) || (zenity --error --text "$text"; exit 1)""") >> 8: sys.exit(1)!' "/root/usr/bin/ubiquity" 
+
+log_end_msg

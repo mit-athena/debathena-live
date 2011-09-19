@@ -1,0 +1,17 @@
+Source: debathena-livecd-tools
+Section: debathena/devel
+Priority: extra
+Standards-Version: 3.7.3
+Maintainer: Debathena Project <debathena@mit.edu>
+Build-Depends: cdbs, debhelper (>=5)
+
+Package: debathena-livecd-tools
+Depends: squashfs-tools, genisoimage, pv, syslinux, netpbm, rsync,
+	 ${misc:Depends}, debathena-archive-keyring
+Architecture: all
+Description: Transmute Ubuntu live CDs into Debathena live CDs
+ Contains the debathena-livecd-convert script, which turns recent 
+ Ubuntu Desktop live CDs into equivalent Debathena live CDs, and the
+ helper files it needs for this conversion.  Works on Hardy and
+ Intrepid Live CDs.
+

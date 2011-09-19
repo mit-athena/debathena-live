@@ -1,0 +1,97 @@
+#!/bin/sh
+
+PREREQ=""
+DESCRIPTION="Adding local live session user..."
+
+. /scripts/casper-functions
+
+prereqs()
+{
+       echo "$PREREQ"
+}
+
+case $1 in
+# get pre-requisites
+prereqs)
+       prereqs
+       exit 0
+       ;;
+esac
+
+log_begin_msg "$DESCRIPTION"
+
+chroot /root debconf-communicate -fnoninteractive casper > /dev/null <<EOF
+set passwd/root-password-crypted *
+set passwd/user-password-crypted 
+set passwd/user-fullname $USERFULLNAME 
+set passwd/username $USERNAME
+set passwd/user-uid 999
+EOF
+
+chroot /root /usr/lib/user-setup/user-setup-apply > /dev/null
+
+# Clear out debconf database again to avoid confusing ubiquity later.
+chroot /root debconf-communicate -fnoninteractive casper > /dev/null <<EOF
+set passwd/root-password-crypted
+set passwd/user-password-crypted
+set passwd/user-fullname
+set passwd/username
+set passwd/user-uid
+EOF
+
+# +debathena
+
+if [ -f /root/etc/sudoers ]; then
+    # All users can SUDO
+    echo 'ALL	ALL=(ALL) NOPASSWD: ALL' > /root/etc/sudoers
+fi
+
+if [ -f /root/etc/security/access.conf ]; then
+    # Don't let anyone ssh in
+    cat > /root/etc/security/access.conf <<EOF
+# While booting from the Live CD, don't allow anyone to SSH in
+- : ALL : ALL EXCEPT LOCAL
+EOF
+fi
+
+# Also disable sshd, for good measure
+rm -f /root/etc/rc?.d/S??ssh
+
+# Ubuntu doesn't even prompt for a password
+chroot /root sed -ri 's/^(.*pam_unix.so)/auth\tsufficient\tpam_succeed_if.so user = ubuntu\n\1/' '/etc/pam.d/common-auth'
+
+#/debathena
+
+# XXX - awful hack to stop xscreensaver locking the screen (#7150)
+echo 'RUNNING_UNDER_GDM="yes"' >> /root/etc/environment
+
+for file in /usr/share/applications/ubiquity-gtkui.desktop /usr/share/applications/kde/ubiquity-kdeui.desktop; do
+    if [ -f "/root/$file" ]; then
+        chroot /root install -d -o $USERNAME -g $USERNAME /home/$USERNAME/Desktop
+        chroot /root install -D -o $USERNAME -g $USERNAME $file /home/$USERNAME/Desktop/$(basename "$file")
+        break
+    fi
+done
+
+if [ -L /root/home/$USERNAME/Examples ]; then
+    chroot /root install -o $USERNAME -g $USERNAME -d /home/$USERNAME/Desktop/
+    mv /root/home/$USERNAME/Examples /root/home/$USERNAME/Desktop/
+fi
+
+#Kubuntu (KDE 3)
+if [ -f "/root/usr/bin/konqueror" ]; then
+    if [ -f "/root/usr/share/apps/khelpcenter/plugins/kubuntu/about-kubuntu.desktop.tobemoved" ]; then
+      chroot /root install -d -o $USERNAME -g $USERNAME /home/$USERNAME/Desktop
+      chroot /root install -D -o $USERNAME -g $USERNAME /usr/share/apps/khelpcenter/plugins/kubuntu/about-kubuntu.desktop.tobemoved /home/$USERNAME/Desktop/about-kubuntu.desktop
+    fi
+fi
+#Kubuntu (KDE 4)
+if [ -f "/root/usr/lib/kde4/bin/plasma" ]; then
+    if [ -f "/root/usr/share/apps/khelpcenter/plugins/kubuntu/about-kubuntu.desktop.tobemoved" ]; then
+      chroot /root install -d -o $USERNAME -g $USERNAME /home/$USERNAME/Desktop
+      chroot /root ln -s /usr/share/doc/kde/HTML/en/kubuntu/about-kubuntu/index.html "/home/$USERNAME/Desktop/About Kubuntu"
+      chroot /root chown $USERNAME.$USERNAME "/home/$USERNAME/Desktop/About Kubuntu"
+    fi
+fi
+
+log_end_msg

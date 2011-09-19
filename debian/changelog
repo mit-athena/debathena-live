@@ -1,0 +1,99 @@
+debathena-livecd-tools (1~beta15) unstable; urgency=low
+
+  * Various updates for Natty compatibility
+  * Removed the install option by removing ubiquity
+
+ -- John Jarvis <jrjarvis@mit.edu>  Tue, 13 Sep 2011 11:10:00 -0500
+
+debathena-livecd-tools (1~beta14) unstable; urgency=low
+
+  * Build Karmic Live CDs.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Wed, 13 Jan 2010 00:19:57 -0500
+
+debathena-livecd-tools (1~beta13) unstable; urgency=low
+
+  * Inhibit openafs-modules-dkms from being installed (for now).
+  * Remove the -nolzma flag to mksquashfs.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Mon, 30 Nov 2009 20:55:32 -0500
+
+debathena-livecd-tools (1~beta12) unstable; urgency=low
+
+  * Suggest that those installing debathena-standard may wish to use
+    their Athena username as their local username.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Mon, 28 Sep 2009 17:42:34 -0600
+
+debathena-livecd-tools (1~beta11) unstable; urgency=low
+
+  * Include debathena-network-manager-config to automatically configure
+    wireless.
+
+ -- Evan Broder <broder@mit.edu>  Thu, 03 Sep 2009 15:54:09 -0400
+
+debathena-livecd-tools (1~beta10) unstable; urgency=low
+
+  * Include more Athena software and OpenOffice.org, and ditch
+    mono and non-en_us localizations.
+  * Install recommended software for installed packages.
+  * Uninstall the old kernel when upgrading the kernel.
+  * Add command-line arguments to support building a more-complete
+    Live DVD and to make CD customization easier.
+  * Add an live-cd-version athinfo query when booting from the CD.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Wed, 24 Jun 2009 14:45:50 -0600
+
+debathena-livecd-tools (1~beta9) unstable; urgency=low
+
+  * Compatibility with the new debathena-workstation, including
+    Sun Java.
+  * Fix an inexplicable bug where casper was still installed on the
+    target root.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Tue, 16 Jun 2009 17:24:09 -0600
+
+debathena-livecd-tools (1~beta8) unstable; urgency=low
+
+  * Don't schedule debathena-workstation to be installed on 
+    debathena-standard installs.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Mon, 27 Apr 2009 18:13:48 -0600
+
+debathena-livecd-tools (1~beta7) unstable; urgency=low
+
+  * Compatibility with the Jaunty Live CD.
+  * Be more tolerant of network coming up slowly when "Install Debathena"
+    is selected from the boot menu.
+  * Don't fail if the kernel on the provided CD is already the most recent.
+  * Provide a clearer indication that you might want to log in as "ubuntu"
+    to get net up.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Sat, 25 Apr 2009 17:47:18 -0600
+
+debathena-livecd-tools (1~beta6) unstable; urgency=low
+
+  * Check whether you have internet before installing.
+  * Use debathena-login-graphical but install debathena-workstation.
+  * Minor ubiquity interface cleanup.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Sun, 12 Apr 2009 0:13:42 -0500
+
+debathena-livecd-tools (1~beta5) unstable; urgency=low
+
+  * Stop changing the Firefox default homepage.
+  * Only change the openafs conf when booting from the CD.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Sun, 8 Mar 2009 1:59:15 -0500
+
+debathena-livecd-tools (1~beta4) unstable; urgency=low
+
+  * Adaptation for Intrepid.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Wed, 25 Feb 2009 14:42:15 -0500
+
+debathena-livecd-tools (1~beta3~ubuntu8.04) unstable; urgency=low
+
+  * Initial debian packaging.
+
+ -- Xavid Pretzer <xavid@mit.edu>  Tue, 18 Nov 2008 14:42:15 -0500

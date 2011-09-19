@@ -1,0 +1,138 @@
+#!/bin/bash -e
+
+# Part 2 of debathena-livecd-convert, run inside the chroot
+#bash
+
+function cleanup {
+    #bash
+    umount -l /proc
+    umount -l /sys
+    umount -l /lib/modules/*/volatile || :
+}
+trap cleanup EXIT SIGINT SIGTERM
+
+EXTRA_PACKAGES="$(cat /tmp/extra-packages)"
+EXTRA_NO_RECOMMENDS="$(cat /tmp/extra-no-recommends)"
+PURGE="$(cat /tmp/purge)"
+aptmods="$(cat /tmp/aptmods)"
+
+PURGE_MINUS=""
+for p in $PURGE ; do
+    PURGE_MINUS="$PURGE_MINUS ${p}~i_"
+done
+
+orig_vmlinuz=$(readlink /vmlinuz)
+
+# Mount special filesystems
+mount -t proc none /proc
+mount -t sysfs none /sys
+
+# Programs like these to be set
+export HOME=/root
+export LC_ALL=C
+
+# If Upstart is in use, add a dummy initctl to stop it starting jobs.
+if [ -x /sbin/initctl ]; then
+        mv /sbin/initctl /sbin/initctl.REAL
+        cat > /sbin/initctl <<EOF
+!/bin/sh
+echo 1>&2
+echo 'Warning: Fake initctl called, doing nothing.' 1>&2
+exit 0
+EOF
+        chmod a+rx /sbin/initctl
+fi
+
+# Mod sources.list
+echo "Modifying sources.list."
+sed -ri 's/^\#\s*(deb.+universe)$/\1/' /etc/apt/sources.list
+# Add updates
+if [[ $(lsb_release -sc) = 'hardy' ]] ; then
+    cat >> /etc/apt/sources.list <<EOF
+
+## Major bug fix updates produced after the final release of the
+## distribution.
+deb http://us.archive.ubuntu.com/ubuntu/ hardy-updates main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu/ hardy-updates main restricted
+EOF
+fi
+# Add Debathena
+cat > /etc/apt/sources.list.d/debathena.list <<EOF
+# Debathena
+deb http://debathena.mit.edu/apt `lsb_release -sc` debathena debathena-config debathena-system openafs
+deb-src http://debathena.mit.edu/apt `lsb_release -sc` debathena debathena-config debathena-system openafs
+EOF
+
+# Get public key
+apt-key add /tmp/debathena-archive-keyring.gpg
+
+# Hack because polkit-auth doesn't work in the chroot
+dpkg-divert --divert /usr/bin/polkit-auth.real --rename /usr/bin/polkit-auth
+echo "#!/bin/sh" > /usr/bin/polkit-auth
+chmod a+rx /usr/bin/polkit-auth
+
+export DEBIAN_FRONTEND=noninteractive
+
+# Up{date,grade}
+echo "update, install aptitude..."
+apt-get update
+apt-get install -y aptitude
+
+# Install some stuff
+echo "Installing Debathena and removing unnecessary packages to free space..."
+#echo "sun-java6-bin shared/accepted-sun-dlj-v1-1 boolean false" | debconf-set-selections
+aptitude install -Ry $EXTRA_NO_RECOMMENDS
+aptitude install -ry debathena-login-graphical \
+    debathena-standard \
+    openafs-modules-generic \
+    ubuntu-desktop \
+    linux-generic \
+    openafs-modules-dkms \
+    $EXTRA_PACKAGES \
+    $PURGE_MINUS
+
+if [ -n "$aptmods" ] ; then
+    aptitude install -ry "$aptmods"
+fi
+
+echo "Upgrading stuff..."
+aptitude -y full-upgrade
+
+# Remove old kernels if we upgraded
+kernel="$(readlink /vmlinuz | cut -d - -f 2-3)"
+aptitude purge -y '~nlinux-image-2!~nlinux-image-'"${kernel}~i" "~nlinux-headers~i"
+
+# Remove ubiquity
+aptitude purge -y ubiquity
+
+#bash
+
+# Set timezone
+rm /etc/localtime
+cp -f /usr/share/zoneinfo/America/New_York /etc/localtime
+echo "America/New_York" > /etc/timezone
+
+# Update the initramfs; this will have already happened if we installed
+# a new kernel
+if [[ "$orig_vmlinuz" = "$(readlink /vmlinuz)" ]] ; then
+    update-initramfs -u
+fi
+
+aptitude clean
+
+# restore initctl
+if [ -x /sbin/initctl.REAL ]; then
+    mv /sbin/initctl.REAL /sbin/initctl
+fi
+# Cache packages that we'd need to install debathena-workstation, but
+# don't actually install them
+# -xavid: punt this in favor of more installed software
+#echo "Downloading additional debathena-workstation packages..."
+#aptitude install -y --download-only debathena-workstation
+#aptitude keep-all
+
+rm /usr/bin/polkit-auth
+dpkg-divert --rename --remove /usr/bin/polkit-auth
+
+# From here, it exits the chroot and goes back to the debathena-livecd-convert script
+echo yay > /tmp/success

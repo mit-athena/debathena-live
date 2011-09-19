@@ -1,0 +1,292 @@
+#!/bin/bash -e
+
+# Turn an ubuntu Karmic Koala live cd into one for Debathena
+# See https://help.ubuntu.com/community/LiveCDCustomization
+# Running this script itself on a machine running the same 
+# distro helps.
+
+function usage () {
+    echo "Usage: $0 [--dvd] [--aptitude '<package1> <package2>...'] [--tempdir /tmp/whatever] ubuntu-11.04-desktop-i386.iso debathena-i386.iso" > /dev/stderr
+    exit
+}
+
+args="$(getopt -o da:t:h --long dvd,aptitude:,tempdir:,help -n debathena-livecd-convert -- "$@")"
+
+eval set -- "$args"
+
+CD="CD"
+CDDESC=""
+aptmods=""
+
+while true ; do
+    case "$1" in
+        -d|--dvd) CD="DVD" ; shift ;;
+	-a|--aptitude) aptmods="$aptmods $2" ; CDDESC="Unofficial "; shift 2 ;;
+	-t|--tempdir) TMP="$2" ; dontrmtmp=1 ; shift 2 ;;
+	-h|--help) usage; shift ;;
+        --) shift ; break ;;
+        *) echo "Internal error!" ; exit 1 ;;
+        esac
+done
+
+if [[ $# -ne 2 ]] ; then
+    usage
+fi
+
+# Set vars
+if [[ -z "$TMP" ]] ; then
+    TMP=$(mktemp -dt debathena-livecd-XXXXXX)
+fi
+MNT="$TMP/mnt"
+EXCD="$TMP/extract-cd"
+EDIT="$TMP/edit"
+
+CDNAME="Debathena"
+
+if [ "$CD" = "DVD" ] ; then
+    echo "Using packages for Live DVD."
+    EXTRA_PACKAGES='
+    debathena-extra-software
+    bind9-host'
+    EXTRA_NO_RECOMMENDS='
+    debathena-network-manager-config'
+    PURGE=''
+else
+    EXTRA_PACKAGES='
+    bind9-host
+    emacs
+    vim-gnome
+    hesiod
+    krb5-clients
+    remctl-client
+    screen
+    rcs
+    cvs
+    subversion
+    git-core
+    tree'
+    EXTRA_NO_RECOMMENDS='
+    texlive-base
+    texlive-latex-base debathena-tex-config
+    texlive-latex-recommended texlive-latex-extra latex-beamer prosper
+    debathena-network-manager-config'
+    PURGE='
+    ^diveintopython$
+    ~nbogofilter
+    ~ngnome-games
+    ^ekiga$
+    ^tomboy$
+    ^f-spot$
+    ~n^mono-
+    ~n^libmono-
+    ~n^openoffice.org-help-
+    ~ngimp-help
+    en-gb$
+    en-au$
+    en-za$
+    ^wbritish$
+    ^python-uno$
+    gnome-user-guide
+    ^example-content$
+    ^language-pack-bn$ ^language-pack-bn-base$
+    ^language-pack-de$ ^language-pack-de-base$ ^language-pack-es$
+    ^language-pack-es-base$ ^language-pack-fr$ ^language-pack-fr-base$
+    ^language-pack-gnome-bn$ ^language-pack-gnome-bn-base$
+    ^language-pack-gnome-de$ ^language-pack-gnome-de-base$
+    ^language-pack-gnome-es$ ^language-pack-gnome-es-base$
+    ^language-pack-gnome-fr$ ^language-pack-gnome-fr-base$
+    ^language-pack-gnome-pt$ ^language-pack-gnome-pt-base$
+    ^language-pack-gnome-xh$ ^language-pack-gnome-xh-base$ ^language-pack-pt$
+    ^language-pack-pt-base$ ^language-pack-xh$ ^language-pack-xh-base$'
+fi
+
+# Having this mounted by accident is /very bad/ (you end up removing files
+# from the real /dev/), so double check.
+umount -l "$EDIT/dev" 2> /dev/null || :
+
+function cleanup {
+    echo "Cleaning up..."
+    umount -l "$EDIT/dev" || :
+    umount -dl "$MNT" || :
+    # These shouldn't be necessary (and shouldn't break a busy loop device),
+    # but seem to be for some reason.
+    # The -d switch to umount should be sufficient, but it's not
+    losetup -d /dev/loop7 || :
+    losetup -d /dev/loop6 || :
+    losetup -d /dev/loop5 || :
+    losetup -d /dev/loop4 || :
+    losetup -d /dev/loop3 || :
+    losetup -d /dev/loop2 || :
+    losetup -d /dev/loop1 || :
+    losetup -d /dev/loop0 || :
+    
+    # Clean intermediate files
+    # If an explicit tempdir was given, don't remove it for debugging
+    if [[ -z "$dontrmtmp" ]] ; then
+	rm -Rf "$TMP"
+    else
+	echo "Not removing $TMP."
+    fi
+}
+trap cleanup EXIT SIGINT SIGTERM
+
+# Simple rsync equivalent that shows progress based on file count
+# Don't include switches that affect output or w/e
+# The -pte options to pv prevent it from printing the total number of
+# lines (i.e., files) and the number of lines/files per second, because
+# those look too much like byte counts.
+function rsync_p {
+    set -e
+    l=`rsync "$@" -n --out-format='%n' | wc -l`
+    rsync "$@" --out-format='%n' | pv -lpte -s $l > /dev/null
+}
+
+# Make sure we have necessary packages -- these are now dependencies
+#apt-get install squashfs-tools genisoimage pv syslinux netpbm
+
+# Make sure the module is loaded
+if ! grep -q squashfs /proc/filesystems ; then
+    echo "Filesystem 'squashfs' not found in /proc/filesystems." >/dev/stderr
+    echo "Try 'modprobe squashfs'?" > /dev/stderr
+    exit 1
+fi
+
+# Mount CD image
+echo "Mounting CD image."
+mkdir -p "$MNT"
+mount -o loop "$1" "$MNT"
+
+# Extract CD contents for modification
+echo "Extracting CD contents for modification."
+mkdir -p "$EXCD"
+rsync_p --exclude=/casper/filesystem.squashfs -a --delete "$MNT/" "$EXCD/"
+
+# Extract squashfs for mods
+echo "Unpack squashfs for modification."
+mkdir -p "$EDIT"
+unsquashfs -d "$EDIT" -f "$MNT/casper/filesystem.squashfs"
+
+# Modifying boot scripts
+echo "Modifying boot scripts..."
+rm -f "$EDIT/usr/share/initramfs-tools/scripts/casper-bottom/02timezone"
+rm -f "$EDIT/usr/share/initramfs-tools/scripts/casper-bottom/15autologin"
+cp "/usr/share/debathena-livecd-tools/casper-bottom/"*[!~] "$EDIT/usr/share/initramfs-tools/scripts/casper-bottom/"
+# for now, remove ubiquity mods since it won't be on the DVD
+rm -f "$EDIT/usr/share/initramfs-tools/scripts/casper-bottom/50mod_ubiquity"
+
+VERSION="$CDDESC$CD $(dpkg-query -W -f '${Version}\n' debathena-livecd-tools) $(date +%F)"
+sed -ri "s/VERSION=unknown/VERSION=\"$VERSION\"/" "$EDIT/usr/share/initramfs-tools/scripts/casper-bottom/50mod_athinfo"
+
+# Mod boot screen
+if [[ -e "$EXCD/isolinux/isolinux.txt" ]] ; then
+    menu="$EXCD/isolinux/isolinux.txt"
+else
+    menu="$EXCD/isolinux/txt.cfg"
+fi
+sed -ri "s/Ubuntu/$CDNAME/g" "$menu" "$EXCD/isolinux/isolinux.cfg"
+pngtopnm < "/usr/share/debathena-livecd-tools/splash/splash1.png" | ppmquant 256 | ppmtopcx > "$EXCD/isolinux/splash.pcx"
+# Force this one to no more than 16 colors
+pngtopnm < "/usr/share/debathena-livecd-tools/splash/splash2.png" | ppmquant 16 | ppmtolss16 "#000000=0" "#ffffff=7" > "$EXCD/isolinux/splash.rle"
+
+# Mod language
+echo 'en' > "$EXCD/isolinux/lang"
+
+# Mod README.diskdefines
+sed -ri 's/^(\#define DISKNAME\s+)(.+)$/\1'"$CDDESC$CDNAME"' \2/' "$EXCD/README.diskdefines"
+
+# Copy ubiquity mod files
+cp -a "/usr/share/debathena-livecd-tools/oncd" "$EDIT/oncd"
+# We need this for our aptitude 
+# success_cmd to not fail horribly, because ubiquity
+# gets rid of its version too soon.
+cp "/usr/lib/debathena-livecd-tools/bin/policy-rc.d" "$EDIT/oncd/"
+
+# Prep chroot
+echo "Preparing for chroot..."
+# We'll need network
+cp /etc/resolv.conf "$EDIT/etc/"
+cp /etc/hosts "$EDIT/etc/"
+# Put a script named /usr/sbin/policy-rc.d that exits with code 101
+# This prevents init scripts from being run by installed software
+cp "/usr/lib/debathena-livecd-tools/bin/policy-rc.d" "$EDIT/usr/sbin/"
+
+# Debathena key
+cp "/usr/share/keyrings/debathena-archive-keyring.gpg" "$EDIT/tmp/"
+
+echo "$EXTRA_PACKAGES" > "$EDIT/tmp/extra-packages"
+echo "$EXTRA_NO_RECOMMENDS" > "$EDIT/tmp/extra-no-recommends"
+echo "$PURGE" > "$EDIT/tmp/purge"
+echo "$aptmods" > "$EDIT/tmp/aptmods"
+
+mount --rbind /dev "$EDIT/dev"
+
+# stop cups since if it is running the
+# the install will try to add printers
+if [ $(pidof cupsd) ]; then
+    service cups stop
+    restart_cups=true
+fi
+
+# Set up the chroot script
+cp "/usr/lib/debathena-livecd-tools/bin/part2" "$EDIT/tmp/"
+
+# Chroot
+echo "Chroot!"
+unset SUDO_USER
+unset SUDO_UID
+unset SUDO_GID
+chroot "$EDIT" /tmp/part2
+echo "End Chroot."
+
+if [ ! -e "$EDIT/tmp/success" ] ; then
+    echo "Chroot part2 failed." > /dev/stderr
+    exit 1
+fi
+
+if [ $restart_cups ]; then
+    service cups restart
+fi
+
+
+
+# Back from the chroot
+
+# Keep regenerated boot image
+cp "$EDIT/initrd.img" "$EXCD/casper/initrd.gz"
+# Karmic uses initrd.lz
+gzip -dc "$EXCD/casper/initrd.gz" | lzma -7 > "$EXCD/casper/initrd.lz"
+# And use the upgraded kernel, if we did an upgrade
+if [[ -e "$(readlink -f "$EDIT/vmlinuz")" ]] ; then
+    echo "Using kernel $(readlink -f "$EDIT/vmlinuz")."
+    mv "$(readlink -f "$EDIT/vmlinuz")" "$EXCD/casper/vmlinuz"
+fi
+
+# Clean up
+rm -Rf "$EDIT/tmp/"* # This includes part2
+rm "$EDIT/etc/resolv.conf"
+rm "$EDIT/etc/hosts"
+rm "$EDIT/usr/sbin/policy-rc.d"
+
+# Regenerate manifest
+echo "Generating manifest."
+chroot "$EDIT" dpkg-query -W --showformat='${Package} ${Version}\n' > "$EXCD/casper/filesystem.manifest"
+cp "$EXCD/casper/filesystem.manifest" "$EXCD/casper/filesystem.manifest-desktop"
+sed -i '/ubiquity/d' "$EXCD/casper/filesystem.manifest-desktop"
+
+# Compress filesystem
+echo "Compressing filesystem."
+rm -f "$EXCD/casper/filesystem.squashfs"
+# Needed -nolzma pre-Karmic
+mksquashfs "$EDIT" "$EXCD/casper/filesystem.squashfs"
+
+# Calc md5sums
+echo "Calcualting checksums."
+rm "$EXCD/md5sum.txt"
+(cd "$EXCD" && find . -type f -print0 | xargs -0 md5sum > md5sum.txt)
+
+# Create ISO
+echo "Building ISO."
+genisoimage -r -V "$CDNAME Live" -cache-inodes -J -l -b "isolinux/isolinux.bin" -c "isolinux/boot.cat" -no-emul-boot -boot-load-size 4 -boot-info-table -o "$2" "$EXCD"
+
+# Now test it with VMware or something
+echo "Done!"

@@ -1,0 +1,33 @@
+#!/bin/sh
+
+PREREQ=""
+DESCRIPTION="Configuring OpenAFS for Live CD boot..."
+
+. /scripts/casper-functions
+
+prereqs()
+{
+       echo "$PREREQ"
+}
+
+case $1 in
+# get pre-requisites
+prereqs)
+       prereqs
+       exit 0
+       ;;
+esac
+
+log_begin_msg "$DESCRIPTION"
+
+# Mod openafs to use memcache
+cat >>/root/etc/openafs/afs.conf <<EOF
+# If our filesystem's not ext2/ext3, use memcache
+if [ "\`stat -f -c %t /var/cache/openafs\`" != ef53 ] ; then
+    OPTIONS="\$OPTIONS -memcache"
+fi
+EOF
+# And make it not so big
+sed -ri 's/^\/afs\:([^:]+)\:.*$/\/afs:\1:25000/' /root/etc/openafs/cacheinfo
+
+log_end_msg
