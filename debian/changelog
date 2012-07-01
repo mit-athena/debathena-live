@@ -1,3 +1,9 @@
+debathena-livecd-tools (1~beta16) UNRELEASED; urgency=low
+
+  * Bump debian/compat to 6
+
+ -- Jonathan Reed <jdreed@mit.edu>  Sun, 01 Jul 2012 12:21:42 -0400
+
 debathena-livecd-tools (1~beta15) unstable; urgency=low
 
   * Various updates for Natty compatibility
