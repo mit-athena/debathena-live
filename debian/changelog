@@ -1,8 +1,10 @@
 debathena-livecd-tools (1~beta16) UNRELEASED; urgency=low
 
   * Bump debian/compat to 6
+  * Switch from control.in to control (Trac: #561)
+  * Bump Standards-Version to 3.9.3
 
- -- Jonathan Reed <jdreed@mit.edu>  Sun, 01 Jul 2012 12:21:42 -0400
+ -- Jonathan Reed <jdreed@mit.edu>  Wed, 03 Apr 2013 13:30:55 -0400
 
 debathena-livecd-tools (1~beta15) unstable; urgency=low
 
